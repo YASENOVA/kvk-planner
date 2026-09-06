@@ -1,0 +1,6 @@
+flask
+flask-wtf
+gunicorn
+python-dotenv
+requests
+markdown
