@@ -1,19 +1,23 @@
 # Deployment blueprint for Render.
 #
-# Render reads this file when you connect the repository, so the service, the
-# secrets and - critically - the persistent disk are all set up in one go.
-# Without that disk the SQLite database lives on a throwaway filesystem and
-# every deploy or restart would silently wipe every submission.
+# Render only reads this file when it sits at the very top of the repository.
+# The application itself lives one level down in kvk-tool/, so rootDir points
+# Render at that folder. The Dockerfile is found inside it automatically -
+# spelling out dockerfilePath here would be resolved from the repository root
+# instead and point at the wrong place.
+#
+# Without the persistent disk below, the SQLite database would live on a
+# throwaway filesystem and every deploy or restart would silently wipe every
+# submission.
 
 services:
   - type: web
     name: kvk-planner
     runtime: docker
-    plan: starter          # always on, no cold starts
-    region: frankfurt      # closest to a European server
-    healthCheckPath: /
+    rootDir: kvk-tool
+    plan: starter
+    region: frankfurt
 
-    # The database file lives here and survives restarts and new deploys.
     disk:
       name: planner-data
       mountPath: /app/data
@@ -32,12 +36,9 @@ services:
       - key: DATABASE_PATH
         value: /app/data/planner.db
 
-      # Cookies over HTTPS only. Render terminates TLS, so this is safe here
-      # and would break a plain-HTTP local run - hence not the default.
+      # Cookies over HTTPS only. Render terminates TLS, so this is safe here.
       - key: SESSION_COOKIE_SECURE
         value: "true"
 
-      # Players uploading screenshots would need a second disk for the files,
-      # so it stays off until you actually want it.
       - key: ENABLE_SCREENSHOT_UPLOAD
         value: "false"
