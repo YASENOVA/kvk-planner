@@ -1,0 +1,43 @@
+# Deployment blueprint for Render.
+#
+# Render reads this file when you connect the repository, so the service, the
+# secrets and - critically - the persistent disk are all set up in one go.
+# Without that disk the SQLite database lives on a throwaway filesystem and
+# every deploy or restart would silently wipe every submission.
+
+services:
+  - type: web
+    name: kvk-planner
+    runtime: docker
+    plan: starter          # always on, no cold starts
+    region: frankfurt      # closest to a European server
+    healthCheckPath: /
+
+    # The database file lives here and survives restarts and new deploys.
+    disk:
+      name: planner-data
+      mountPath: /app/data
+      sizeGB: 1
+
+    envVars:
+      # Signs session cookies and CSRF tokens. Render generates it once and
+      # keeps it; changing it later just logs everyone out.
+      - key: SECRET_KEY
+        generateValue: true
+
+      # Opens the cross-event overview at /superadmin?secret=...
+      - key: SUPERADMIN_SECRET
+        generateValue: true
+
+      - key: DATABASE_PATH
+        value: /app/data/planner.db
+
+      # Cookies over HTTPS only. Render terminates TLS, so this is safe here
+      # and would break a plain-HTTP local run - hence not the default.
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+
+      # Players uploading screenshots would need a second disk for the files,
+      # so it stays off until you actually want it.
+      - key: ENABLE_SCREENSHOT_UPLOAD
+        value: "false"
