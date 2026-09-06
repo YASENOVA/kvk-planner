@@ -14,7 +14,10 @@ services:
   - type: web
     name: kvk-planner
     runtime: docker
-    rootDir: kvk-tool
+    # Quoted because the folder name contains a space: macOS appended the "2"
+    # when unzipping next to an existing kvk-tool folder, and that name is what
+    # actually landed in the repository.
+    rootDir: "kvk-tool 2"
     plan: starter
     region: frankfurt
 
