@@ -1,0 +1,280 @@
+        // Timezone Management
+        let currentTzMode = localStorage.getItem('kvk_tz_mode') || 'utc';
+        const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        const cleanTzName = detectedTz.split('/').pop().replace(/_/g, ' ');
+
+        function setTimezoneMode(mode) {
+            currentTzMode = mode;
+            localStorage.setItem('kvk_tz_mode', mode);
+            
+            const btnUtc = document.getElementById('tz-toggle-utc');
+            const btnLocal = document.getElementById('tz-toggle-local');
+            
+            if (!btnUtc || !btnLocal) return;
+
+            if (mode === 'local') {
+                btnLocal.className = 'tz-toggle-btn px-3 py-1 text-xs font-bold rounded-md bg-kvk-gold text-kvk-gray-900 transition-all shadow-sm';
+                btnUtc.className = 'tz-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-300 hover:text-white transition-all';
+            } else {
+                btnUtc.className = 'tz-toggle-btn px-3 py-1 text-xs font-bold rounded-md bg-kvk-gold text-kvk-gray-900 transition-all shadow-sm';
+                btnLocal.className = 'tz-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-300 hover:text-white transition-all';
+            }
+
+            updateSlotTimeLabels(mode);
+        }
+
+        function updateSlotTimeLabels(mode) {
+            const slots = document.querySelectorAll('.slot');
+            if (!slots.length) return;
+
+            const refEventNoon = new Date(Date.UTC(2026, 5, 15, 12, 0, 0));
+            const refLocalDay = refEventNoon.getDate();
+
+            const sampleGrid = document.querySelector('[id^="slot-grid-"]');
+            const totalSlots = sampleGrid ? sampleGrid.querySelectorAll('.slot').length : 49;
+
+            slots.forEach(slot => {
+                const index = parseInt(slot.dataset.index, 10);
+                const textEl = slot.querySelector('.slot-time-text');
+                if (!textEl) return;
+
+                let shiftEl = slot.querySelector('.slot-day-shift');
+
+                if (mode === 'utc') {
+                    textEl.textContent = slot.dataset.utcLabel;
+                    if (shiftEl) shiftEl.remove();
+                    slot.title = `${slot.dataset.utcLabel} UTC (${slot.dataset.count} applicants - ${slot.dataset.contention} demand)`;
+                } else {
+                    const startMins = (totalSlots === 48) ? (index * 30) : ((index * 30) - 15);
+                    const slotStartDate = new Date(Date.UTC(2026, 5, 15, 0, startMins, 0));
+                    const slotEndDate = new Date(Date.UTC(2026, 5, 15, 0, startMins + 30, 0));
+
+                    const pad = n => String(n).padStart(2, '0');
+                    const startStr = `${pad(slotStartDate.getHours())}:${pad(slotStartDate.getMinutes())}`;
+                    const endStr = `${pad(slotEndDate.getHours())}:${pad(slotEndDate.getMinutes())}`;
+
+                    const slotLocalDay = slotStartDate.getDate();
+                    let diffDays = slotLocalDay - refLocalDay;
+                    if (diffDays > 15) diffDays -= 30;
+                    if (diffDays < -15) diffDays += 30;
+
+                    textEl.textContent = `${startStr}-\u200b${endStr}`;
+                    const shiftText = diffDays > 0 ? '+1d' : (diffDays < 0 ? '-1d' : '');
+                    
+                    if (shiftText) {
+                        if (!shiftEl) {
+                            shiftEl = document.createElement('span');
+                            shiftEl.className = 'slot-day-shift text-[9px] font-bold text-amber-400 block -mt-0.5';
+                            textEl.parentElement.appendChild(shiftEl);
+                        }
+                        shiftEl.textContent = shiftText;
+                    } else if (shiftEl) {
+                        shiftEl.remove();
+                    }
+
+                    const dayTag = shiftText ? ` (${shiftText})` : '';
+                    slot.title = `${startStr}-${endStr}${dayTag} Local (${slot.dataset.count} applicants - ${slot.dataset.contention} demand)`;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const detectedTzEl = document.getElementById('detected-tz-name');
+            if (detectedTzEl) detectedTzEl.textContent = cleanTzName;
+            setTimezoneMode(currentTzMode);
+            
+            function initializeGrid(gridId) {
+                const grid = document.getElementById(gridId);
+                if (!grid) return;
+
+                const slotsInput = document.getElementById(gridId.replace('slot-grid', 'slots-input'));
+                let isMouseDown = false;
+
+                grid.addEventListener('mousedown', function (e) {
+                    const slot = e.target.closest('.slot');
+                    if (slot) {
+                        e.preventDefault();
+                        isMouseDown = true;
+                        toggleSlot(slot);
+                    }
+                });
+
+                grid.addEventListener('mouseover', function (e) {
+                    if (isMouseDown) {
+                        const slot = e.target.closest('.slot');
+                        if (slot) {
+                            toggleSlot(slot);
+                        }
+                    }
+                });
+
+                document.addEventListener('mouseup', function () {
+                    isMouseDown = false;
+                });
+                
+                function toggleSlot(element) {
+                    const slot = element.closest('.slot');
+                    if (!slot) return;
+                    slot.classList.toggle('selected');
+                    updateSlotsInput();
+                }
+
+                function updateSlotsInput() {
+                    const selectedSlots = [];
+                    grid.querySelectorAll('.slot.selected').forEach(slot => {
+                        selectedSlots.push(parseInt(slot.dataset.index));
+                    });
+                    slotsInput.value = JSON.stringify(selectedSlots);
+                }
+                
+                updateSlotsInput();
+            }
+
+            initializeGrid('slot-grid-construction');
+            initializeGrid('slot-grid-training');
+            initializeGrid('slot-grid-research');
+
+            // Speedup Unit Selection and Calculation
+            const sections = ['construction', 'training', 'research'];
+            
+            sections.forEach(section => {
+                const group = document.getElementById(`input-group-${section}`);
+                if (!group) return;
+
+                const unitBtns = document.querySelectorAll(`.unit-btn[data-section="${section}"]`);
+                const daysContainer = document.getElementById(`days-container-${section}`);
+                const hoursContainer = document.getElementById(`hours-container-${section}`);
+                const minutesContainer = document.getElementById(`minutes-container-${section}`);
+                
+                const daysInput = document.getElementById(`days-${section}`);
+                const hoursInput = document.getElementById(`hours-${section}`);
+                const minsInput = document.getElementById(`mins-${section}`);
+                const hiddenInput = document.getElementById(`speedups-${section}`);
+
+                unitBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const unit = btn.dataset.unit;
+                        
+                        // Update button styles
+                        unitBtns.forEach(b => {
+                            b.classList.remove('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
+                            b.classList.add('bg-kvk-gray-700', 'text-gray-400', 'border-kvk-gray-700');
+                        });
+                        btn.classList.add('bg-kvk-gold', 'text-kvk-gray-900', 'font-bold', 'border-kvk-gold');
+                        btn.classList.remove('bg-kvk-gray-700', 'text-gray-400', 'border-kvk-gray-700');
+
+                        // Show/Hide containers
+                        if (unit === 'days') {
+                            daysContainer.classList.remove('hidden');
+                            hoursContainer.classList.remove('hidden');
+                            minutesContainer.classList.remove('hidden');
+                        } else if (unit === 'hours') {
+                            daysContainer.classList.add('hidden');
+                            hoursContainer.classList.remove('hidden');
+                            minutesContainer.classList.remove('hidden');
+                            daysInput.value = '';
+                        } else {
+                            daysContainer.classList.add('hidden');
+                            hoursContainer.classList.add('hidden');
+                            minutesContainer.classList.remove('hidden');
+                            daysInput.value = '';
+                            hoursInput.value = '';
+                        }
+                        calculateTotal();
+                    });
+                });
+
+                function calculateTotal() {
+                    const d = parseInt(daysInput.value || 0);
+                    const h = parseInt(hoursInput.value || 0);
+                    const m = parseInt(minsInput.value || 0);
+                    
+                    const total = (d * 1440) + (h * 60) + m;
+                    hiddenInput.value = total;
+                }
+
+                [daysInput, hoursInput, minsInput].forEach(input => {
+                    input.addEventListener('input', () => {
+                        // Basic validation: only cap hours/mins if we are in a higher unit mode
+                        if (input === hoursInput && !daysContainer.classList.contains('hidden')) {
+                            if (parseInt(input.value) > 23) input.value = 23;
+                        }
+                        if (input === minsInput && (!hoursContainer.classList.contains('hidden') || !daysContainer.classList.contains('hidden'))) {
+                            if (parseInt(input.value) > 59) input.value = 59;
+                        }
+                        
+                        calculateTotal();
+                    });
+                });
+            });
+
+            // Form Validation
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                // 1. Validate Player ID & Name
+                const player_id = document.getElementById('player_id').value.trim();
+                const player_name = document.getElementById('player_name').value.trim();
+
+                if (!/^\d+$/.test(player_id)) {
+                    e.preventDefault();
+                    alert("Player ID must be numeric.");
+                    return;
+                }
+
+                if (!player_name) {
+                    e.preventDefault();
+                    alert("Please enter a valid Player Name.");
+                    return;
+                }
+
+                const days = [
+                    { id: 'construction', name: 'Construction', speedups: 'speedups-construction', gold: 'truegold', gold2: 'tempered_truegold', slots: 'slots-input-construction' },
+                    { id: 'training', name: 'Training', speedups: 'speedups-training', slots: 'slots-input-training' },
+                    { id: 'research', name: 'Research', speedups: 'speedups-research', gold: 'truegold_dust', slots: 'slots-input-research' }
+                ];
+
+                let daysAttempted = 0;
+                let daysInvalid = [];
+
+                days.forEach(day => {
+                    const speedupsInput = document.getElementById(day.speedups);
+                    if (!speedupsInput) return; // Day not active
+
+                    const speedups = parseInt(speedupsInput.value || 0);
+                    const gold = day.gold ? parseInt(document.getElementById(day.gold).value || 0) : 0;
+                    const gold2 = day.gold2 ? parseInt(document.getElementById(day.gold2).value || 0) : 0;
+                    const slotsVal = document.getElementById(day.slots).value || "[]";
+                    const slots = JSON.parse(slotsVal);
+
+                    if (speedups > 0 || gold > 0 || gold2 > 0) {
+                        daysAttempted++;
+                        if (slots.length === 0) {
+                            daysInvalid.push(day.name);
+                        }
+                    }
+                });
+
+                if (daysAttempted === 0) {
+                    // On the combined form the battle half may be the only
+                    // thing someone came to answer. Blocking the whole send
+                    // would cost us that answer too, so we ask instead.
+                    var modeEl = document.querySelector('input[name="_mode"]');
+                    if (modeEl && modeEl.value === 'both') {
+                        if (!confirm("You have not filled in the prep week part. Send anyway?")) {
+                            e.preventDefault();
+                            return;
+                        }
+                    } else {
+                        e.preventDefault();
+                        alert("Please enter resource data for at least one event day.");
+                        return;
+                    }
+                }
+
+                if (daysInvalid.length > 0) {
+                    e.preventDefault();
+                    alert("You must select at least one time slot for: " + daysInvalid.join(", "));
+                    return;
+                }
+            });
+        });
