@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit for {{ event.name }}</title>
+    {% include 'analytics.html' %}
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'kvk-gold': '#FBBF24', // Amber-400
+                        'kvk-gray': {
+                            700: '#374151',
+                            800: '#1F2937',
+                            900: '#111827',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .slot {
+            border: 1.5px solid #374151; /* kvk-gray-700 */
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease-in-out;
+            border-radius: 0.375rem;
+            background-color: #1f2937;
+        }
+        .slot:before {
+            content: "";
+            display: block;
+            padding-top: 100%;
+        }
+        .slot.slot-traffic-low {
+            border-color: rgba(34, 197, 94, 0.7); /* bright green-500 */
+        }
+        .slot.slot-traffic-low:hover {
+            border-color: #4ade80; /* bright green-400 */
+            box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+        }
+        .slot.slot-traffic-medium {
+            border-color: rgba(234, 179, 8, 0.8); /* bright yellow-500 */
+        }
+        .slot.slot-traffic-medium:hover {
+            border-color: #fde047; /* bright yellow-300 */
+            box-shadow: 0 0 6px rgba(250, 204, 21, 0.4);
+        }
+        .slot.slot-traffic-high {
+            border-color: rgba(239, 68, 68, 0.85); /* bright red-500 */
+        }
+        .slot.slot-traffic-high:hover {
+            border-color: #f87171; /* bright red-400 */
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+        }
+        .slot.selected {
+            background-color: #FBBF24 !important; /* kvk-gold */
+            border-color: #FBBF24 !important;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+        }
+        .slot.selected .slot-content {
+            color: #111827 !important; /* kvk-gray-900 */
+            font-weight: 700;
+        }
+        .slot.selected .slot-day-shift {
+            color: #111827 !important;
+        }
+        .slot.selected .contention-indicator {
+            box-shadow: 0 0 0 1.5px #111827;
+        }
+        .slot-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            line-height: 1.15;
+            text-align: center;
+            padding: 2px;
+        }
+        .slot-time-text {
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+        .contention-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 7px;
+            height: 7px;
+            border-radius: 9999px;
+            pointer-events: none;
+            display: block;
+        }
+        .contention-indicator.dot-low {
+            background-color: #4ade80; /* bright neon green-400 */
+            box-shadow: 0 0 5px rgba(74, 222, 128, 0.9);
+        }
+        .contention-indicator.dot-medium {
+            background-color: #facc15; /* bright vivid yellow-400 */
+            box-shadow: 0 0 5px rgba(250, 204, 21, 0.9);
+        }
+        .contention-indicator.dot-high {
+            background-color: #ef4444; /* bright traffic red-500 */
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.95);
+        }
+    </style>
+</head>
+<body class="bg-kvk-gray-900 text-gray-200 antialiased">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-kvk-gold">Submission Form</h1>
+            <p class="text-lg text-gray-400 mt-2 flex items-center justify-center gap-2">
+                <span>{{ event.name }}</span>
+                {% if event.server_id %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-kvk-gray-800 text-kvk-gold border border-kvk-gold/40">
+                        Kingdom #{{ event.server_id }}
+                    </span>
+                {% endif %}
+            </p>
+        </header>
+
+        <form action="/event/{{ event.uid }}/submit" method="POST" {% if enable_screenshot_upload %}enctype="multipart/form-data"{% endif %} class="bg-kvk-gray-800 p-6 rounded-xl shadow-lg border border-kvk-gray-700">
+            <input type="hidden" name="_mode" value="prep">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+{% include '_prep_identity.html' %}
+{% include '_prep_fields.html' %}
+            <button type="submit" class="mt-6 w-full bg-kvk-gold text-kvk-gray-900 font-bold py-3 px-4 rounded-md hover:bg-amber-500 transition duration-300">Submit All Entries</button>
+        </form>
+
+        <footer class="mt-12 pb-8 text-center border-t border-kvk-gray-700 pt-8">
+            <a href="https://github.com/prashmohan/kingdom-appt-planner" target="_blank" class="text-gray-500 hover:text-kvk-gold transition inline-block">
+                <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 .297c-6.63 0-11.5 5.373-11.5 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.02-1.04-.032-2.043-3.197.69-3.872-1.542-3.872-1.542-.523-1.328-1.277-1.682-1.277-1.682-1.044-.714.079-.7.079-.7 1.154.08 1.761 1.186 1.761 1.186 1.026 1.756 2.99 1.248 3.718.954.103-.744.515-1.248.958-1.535-2.552-.29-5.232-1.276-5.232-5.676 0-1.253.448-2.277 1.182-3.078-.117-.29-.513-1.458.113-3.037 0 0 .96-.307 3.148 1.174.912-.254 1.89-.381 2.86-.386.97.005 1.948.132 2.86.386 2.186-1.481 3.145-1.174 3.145-1.174.628 1.579.232 2.747.115 3.037.736.801 1.18 1.825 1.18 3.078 0 4.41-2.685 5.383-5.242 5.666.413.354.78 1.053.78 2.122 0 1.532-.014 2.768-.014 3.143 0 .323.217.698.826.577C20.565 22.092 24 17.592 24 12.297c0-6.627-4.87-12-11.5-12z"/>
+                </svg>
+            </a>
+        </footer>
+    </div>
+
+    <script>
+{% include '_prep_script.html' %}
+    </script>
+</body>
+</html>
