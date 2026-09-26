@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit for {{ event.name }}</title>
+    {% include 'analytics.html' %}
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: {
+                'kvk-gold': '#FBBF24',
+                'kvk-gray': { 700: '#374151', 800: '#1F2937', 900: '#111827' }
+            } } }
+        }
+    </script>
+    <style>
+        .field {
+            background:#111827; border:1px solid #374151; border-radius:0.375rem;
+            padding:0.5rem 0.75rem; color:#e5e7eb; width:100%;
+        }
+        .field:focus { outline:none; border-color:#FBBF24; }
+
+        /* Troop tier pills */
+        .tier input { position:absolute; opacity:0; pointer-events:none; }
+        .tier label {
+            display:block; text-align:center; padding:0.45rem 0.2rem;
+            border:1.5px solid #374151; border-radius:0.375rem; cursor:pointer;
+            user-select:none; font-weight:700; font-size:0.8rem;
+            background:#1f2937; color:#9ca3af; transition:all .15s;
+        }
+        .tier label:hover { border-color:#6b7280; }
+        .tier input:checked + label { background:#78350f; border-color:#FBBF24; color:#fef3c7; }
+        .tier input:checked + label.none { background:#374151; border-color:#9ca3af; color:#e5e7eb; }
+        .tier input:focus-visible + label { box-shadow:0 0 0 2px #FBBF24; }
+
+        /* Availability slots */
+        .slot input { position:absolute; opacity:0; pointer-events:none; }
+        .slot label {
+            display:block; cursor:pointer; user-select:none;
+            border:1.5px solid #374151; border-radius:0.5rem;
+            background:#1f2937; padding:0.7rem 0.5rem; text-align:center;
+            transition:all .15s;
+        }
+        .slot label:hover { border-color:#6b7280; }
+        .slot .time { display:block; font-weight:700; color:#e5e7eb; font-size:0.95rem; }
+        .slot .local { display:block; font-size:0.7rem; color:#6b7280; margin-top:0.1rem; }
+        .slot .demand { display:block; font-size:0.65rem; margin-top:0.25rem; }
+        .slot input:checked + label {
+            background:#14532d; border-color:#22c55e;
+        }
+        .slot input:checked + label .time { color:#dcfce7; }
+        .slot input:focus-visible + label { box-shadow:0 0 0 2px #22c55e; }
+        .slot label.d-low    { border-left:4px solid rgba(34,197,94,.8); }
+        .slot label.d-medium { border-left:4px solid rgba(234,179,8,.8); }
+        .slot label.d-high   { border-left:4px solid rgba(239,68,68,.85); }
+        .dot { display:inline-block; width:.5rem; height:.5rem; border-radius:9999px; margin-right:.3rem; }
+        .dot-low{background:#22c55e}.dot-medium{background:#eab308}.dot-high{background:#ef4444}
+
+        .tzbtn { cursor:pointer; padding:.25rem .6rem; border-radius:.375rem; font-size:.75rem;
+                 border:1px solid #374151; color:#9ca3af; background:#1f2937; }
+        .tzbtn.on { border-color:#FBBF24; color:#fef3c7; background:#78350f; }
+    </style>
+</head>
+<body class="bg-kvk-gray-900 text-gray-200 min-h-screen">
+<div class="max-w-2xl mx-auto px-4 py-8">
+
+    <header class="text-center mb-8">
+        <h1 class="text-3xl font-black text-kvk-gold">{{ event.name }}</h1>
+        <p class="text-gray-400 mt-2">
+            {{ '%02d:00'|format(event.slots[0].start) }}&ndash;{{ '%02d:00'|format((event.slots[-1].start + 1) % 24) }} UTC
+            {%- if event.server_id %} &middot; Kingdom {{ event.server_id }}{% endif %}
+        </p>
+        {% if total_responses %}
+        <p class="text-gray-500 text-sm mt-1">{{ total_responses }} submitted so far</p>
+        {% endif %}
+    </header>
+
+    {% if error %}
+    <div class="mb-6 p-4 rounded-lg bg-red-900/40 border border-red-500 text-red-100">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('submit', event_uid=event.uid) }}" id="battle-form" novalidate>
+        <input type="hidden" name="_mode" value="battle">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Your Information -->
+        <section class="bg-kvk-gray-800 rounded-xl p-5 mb-5 border border-kvk-gray-700">
+            <h2 class="text-lg font-bold text-kvk-gold mb-4">Your Information</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label class="block">
+                    <span class="text-sm text-gray-300">Player Name</span>
+                    <input type="text" name="player_name" required maxlength="40"
+                           value="{{ form.player_name if form else '' }}"
+                           class="field mt-1">
+                </label>
+
+                <label class="block">
+                    <span class="text-sm text-gray-300">Player ID (Numeric)</span>
+                    <input type="text" name="player_id" required inputmode="numeric" pattern="\d*"
+                           value="{{ form.player_id if form else '' }}"
+                           class="field mt-1">
+                </label>
+            </div>
+
+            <label class="block mt-4">
+                <span class="text-sm text-gray-300">Alliance</span>
+                {% if event.cfg.alliances %}
+                <select name="alliance_name" required class="field mt-1">
+                    <option value="">Select...</option>
+                    {% for a in event.cfg.alliances %}
+                    <option value="{{ a }}" {% if form and form.alliance_name == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <input type="text" name="alliance_name" maxlength="40"
+                       value="{{ form.alliance_name if form else '' }}" class="field mt-1">
+                {% endif %}
+            </label>
+        </section>
+
+        <!-- Troops -->
+        <section class="bg-kvk-gray-800 rounded-xl p-5 mb-5 border border-kvk-gray-700">
+            <h2 class="text-lg font-bold text-kvk-gold mb-1">Troop Tiers</h2>
+            <p class="text-sm text-gray-400 mb-4">
+                The highest tier you can field in real numbers, per troop type.
+            </p>
+
+            {% for troop in event.cfg.troop_types %}
+            <div class="mb-4">
+                <div class="text-sm font-semibold text-gray-200 mb-2">{{ troop.name }}</div>
+                <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 tier">
+                    {% for t in event.cfg.tiers %}
+                    {% set fid = 'tier_' ~ troop.key ~ '_' ~ loop.index %}
+                    <input type="radio" id="{{ fid }}" name="tier_{{ troop.key }}" value="{{ t }}"
+                           {% if form and form['tier_' ~ troop.key] == t %}checked{% endif %}>
+                    <label for="{{ fid }}">{{ t }}</label>
+                    {% endfor %}
+                    {% set bid = 'tier_' ~ troop.key ~ '_none' %}
+                    <input type="radio" id="{{ bid }}" name="tier_{{ troop.key }}" value="{{ below_label }}"
+                           {% if form and form['tier_' ~ troop.key] == below_label %}checked{% endif %}>
+                    <label for="{{ bid }}" class="none col-span-2 sm:col-span-1">{{ below_label }}</label>
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+
+        <!-- Availability -->
+        <section class="bg-kvk-gray-800 rounded-xl p-5 mb-5 border border-kvk-gray-700">
+            <div class="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                <h2 class="text-lg font-bold text-kvk-gold">Availability</h2>
+                <div class="flex items-center gap-1">
+                    <span class="text-xs text-gray-500 mr-1">Show times in</span>
+                    <button type="button" id="tz-utc" class="tzbtn on">UTC</button>
+                    <button type="button" id="tz-local" class="tzbtn">Local</button>
+                </div>
+            </div>
+            <p class="text-sm text-gray-400 mb-3">
+                Select every hour you can be at your device and act.
+            </p>
+
+            <div class="text-xs text-gray-500 mb-3">
+                Demand:
+                <span class="ml-2"><span class="dot dot-low"></span>Low</span>
+                <span class="ml-3"><span class="dot dot-medium"></span>Moderate</span>
+                <span class="ml-3"><span class="dot dot-high"></span>High</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {% for slot in slots %}
+                {% set count = density[slot.index] %}
+                {% set level = 'high' if count > 20 else ('medium' if count > 10 else 'low') %}
+                <div class="slot">
+                    <input type="checkbox" id="h{{ slot.index }}" name="hour_{{ slot.index }}" value="yes"
+                           data-start="{{ slot.start }}"
+                           {% if form and form['hour_' ~ slot.index] == 'yes' %}checked{% endif %}>
+                    <label for="h{{ slot.index }}" class="d-{{ level }}">
+                        <span class="time" data-utc="{{ slot.label }}" data-start="{{ slot.start }}">{{ slot.label }}</span>
+                        <span class="local"></span>
+                        <span class="demand text-gray-500">{{ count }} selected</span>
+                    </label>
+                </div>
+                <input type="hidden" name="hour_{{ slot.index }}" value="no">
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Notes -->
+        <section class="bg-kvk-gray-800 rounded-xl p-5 mb-6 border border-kvk-gray-700">
+            <h2 class="text-lg font-bold text-kvk-gold mb-1">Notes (Optional)</h2>
+            <p class="text-sm text-gray-400 mb-3">Anything leadership should know.</p>
+            <textarea name="notes" rows="3" maxlength="500" class="field">{{ form.notes if form else '' }}</textarea>
+        </section>
+
+        <div id="client-error" class="hidden mb-4 p-3 rounded-lg bg-red-900/40 border border-red-500 text-red-100 text-sm"></div>
+
+        <button type="submit"
+                class="w-full bg-kvk-gold hover:bg-amber-300 text-kvk-gray-900 font-black text-lg py-3 rounded-lg transition">
+            Submit
+        </button>
+
+        <p class="text-center text-xs text-gray-500 mt-4">
+            Submitting again with the same Player ID updates your entry.
+        </p>
+    </form>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('battle-form');
+    var box  = document.getElementById('client-error');
+    var troopKeys = {{ event.cfg.troop_types | map(attribute='key') | list | tojson }};
+
+    // --- timezone display -------------------------------------------------
+    // Purely cosmetic: the value submitted is always the UTC hour index.
+    var offset = -new Date().getTimezoneOffset() / 60;
+    var tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+    var btnUtc = document.getElementById('tz-utc');
+    var btnLoc = document.getElementById('tz-local');
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function shift(h) { return ((h + offset) % 24 + 24) % 24; }
+
+    function showLocal(on) {
+        btnUtc.classList.toggle('on', !on);
+        btnLoc.classList.toggle('on', on);
+        document.querySelectorAll('.slot .time').forEach(function (el) {
+            var start = parseInt(el.dataset.start, 10);
+            var local = el.parentElement.querySelector('.local');
+            if (on) {
+                var s = shift(start), e = shift(start + 1);
+                // Whole-hour offsets keep this exact; half-hour zones round down.
+                el.textContent = pad(Math.floor(s)) + ':00-' + pad(Math.floor(e)) + ':00';
+                local.textContent = el.dataset.utc + ' UTC';
+            } else {
+                el.textContent = el.dataset.utc;
+                local.textContent = tzName;
+            }
+        });
+    }
+    btnUtc.addEventListener('click', function () { showLocal(false); });
+    btnLoc.addEventListener('click', function () { showLocal(true); });
+    showLocal(false);
+
+    // --- validation -------------------------------------------------------
+    function fail(msg) {
+        box.textContent = msg;
+        box.classList.remove('hidden');
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    form.addEventListener('submit', function (e) {
+        box.classList.add('hidden');
+
+        if (!form.player_name.value.trim()) {
+            e.preventDefault(); return fail('Please enter your player name.');
+        }
+
+        var id = form.player_id.value.replace(/[^0-9]/g, '');
+        if (id.length < 6 || id.length > 12) {
+            e.preventDefault();
+            return fail('Player ID should be 6 to 12 digits, numbers only.');
+        }
+        form.player_id.value = id;
+
+        if (form.alliance_name && !form.alliance_name.value.trim()) {
+            e.preventDefault(); return fail('Please select your alliance.');
+        }
+
+        for (var t = 0; t < troopKeys.length; t++) {
+            if (!form.querySelector('input[name="tier_' + troopKeys[t] + '"]:checked')) {
+                e.preventDefault();
+                return fail('Please pick a tier for every troop type.');
+            }
+        }
+    });
+})();
+</script>
+</body>
+</html>
