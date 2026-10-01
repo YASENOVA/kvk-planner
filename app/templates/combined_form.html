@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit for {{ event.name }}</title>
+    {% include 'analytics.html' %}
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
+    <script>
+    tailwind.config={darkMode:'class',theme:{extend:{colors:{
+     'kvk-gold':'#00c8ff','kvk-blue':'#7df3ff',
+     'kvk-gray':{700:'#16202e',800:'#0b1017',900:'#05070d'}}}}}
+    </script>
+    <style>
+{% include '_prep_styles.html' %}
+{% include '_battle_styles.html' %}
+    </style>
+{% include '_theme.html' %}
+</head>
+<body class="bg-kvk-gray-900 text-gray-200 antialiased">
+<div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+    <header class="text-center mb-9">
+        <p class="eyebrow-muted">{{ event.name }}{% if event.server_id %} &middot; Kingdom {{ event.server_id }}{% endif %}</p>
+        <h1 class="page-title">Submission form</h1>
+        <p class="page-kicker">KvK prep week &amp; battle day</p>
+        <p class="page-note">You can open this link again any time and change your answers.</p>
+    </header>
+
+    <form action="/event/{{ event.uid }}/submit" method="POST" id="battle-form" novalidate
+          {% if enable_screenshot_upload %}enctype="multipart/form-data"{% endif %}
+          class="bg-kvk-gray-800 rounded-xl shadow-lg border border-kvk-gray-700">
+        <input type="hidden" name="_mode" value="both">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% include '_combined_identity.html' %}
+
+        <div class="px-4 pt-7">
+            <div class="sect"><span class="sect-num">1</span><span class="sect-title">Prep week</span><span class="sect-line"></span></div>
+            <p class="sect-sub">Your resources and the times you can take a castle appointment.</p>
+        </div>
+        {% include '_prep_fields.html' %}
+
+        <div class="px-4 pt-9">
+            <div class="sect"><span class="sect-num">2</span><span class="sect-title">Battle day</span><span class="sect-line"></span></div>
+            <p class="sect-sub">Your troop tiers and the hours you are online.</p>
+        </div>
+        <div class="p-4">
+        {% include '_battle_fields.html' %}
+        </div>
+
+        <div class="p-4 pt-0">
+            <div id="client-error" class="hidden mb-4 p-3 rounded-lg bg-red-900/40 border border-red-500 text-red-100 text-sm"></div>
+            {% if error %}<div class="mb-4 p-3 rounded-lg bg-red-900/40 border border-red-500 text-red-100 text-sm">{{ error }}</div>{% endif %}
+            <button type="submit" class="w-full bg-kvk-gold text-kvk-gray-900 font-bold py-3 px-4 rounded-md hover:bg-cyan-300 transition duration-300">
+                Send
+            </button>
+        </div>
+    </form>
+
+    <footer class="mt-12 pb-8 text-center border-t border-kvk-gray-700 pt-8">
+        <p class="text-xs text-gray-600">KvK Planner</p>
+    </footer>
+</div>
+
+<script>
+{% include '_prep_script.html' %}
+</script>
+<script>
+{% include '_battle_script.html' %}
+</script>
+</body>
+</html>

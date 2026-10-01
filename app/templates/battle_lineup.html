@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"><head>{% include '_base_head.html' %}
+<title>{{ event.name }} - Line-up - KvK Planner</title></head>
+<body class="bg-kvk-gray-900 text-gray-200 antialiased">
+<div class="container mx-auto p-4 md:p-8 max-w-5xl">
+  <h1 class="text-3xl font-bold text-kvk-gold">{{ event.name }}</h1>
+  <p class="text-gray-400 mt-1 mb-6">Battle line-up{% if event.server_id %} · Kingdom {{ event.server_id }}{% endif %}</p>
+
+  {% if not published %}
+    <div class="bg-kvk-gray-800 border border-kvk-gray-700 rounded-xl p-8 text-center">
+      <p class="text-lg text-gray-300">The line-up is not published yet.</p>
+      <p class="text-sm text-gray-500 mt-2">Leadership opens this page when the teams are final.</p>
+    </div>
+  {% else %}
+    {% for team in plan.teams %}
+      {% if team.core %}
+      <div class="bg-kvk-gray-800 border border-kvk-gray-700 rounded-xl p-5 mb-5">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="text-xl font-bold text-gray-100">{{ team.cfg.name }}</h2>
+          <span class="text-xs text-gray-500">
+            {{ team.core|length }} players{% if team.cfg.alliance %} · {{ team.cfg.alliance }}{% endif %}
+          </span>
+        </div>
+        <table class="w-full text-sm">
+          <thead><tr class="text-gray-500 text-xs uppercase tracking-wide">
+            <th class="text-left py-1">Player</th><th class="text-left">Role</th>
+            <th class="text-left">Alliance</th><th class="text-left">Tier</th>
+            {% for slot in data.slots %}<th class="text-center px-1">{{ slot.short }}</th>{% endfor %}
+          </tr></thead>
+          <tbody>
+          {% for p in team.core %}
+            <tr class="border-t border-kvk-gray-700">
+              <td class="py-1.5 font-semibold text-gray-100">{{ p.player_name }}</td>
+              <td class="text-gray-400">{{ p.role or '' }}</td>
+              <td class="text-gray-400">{{ p.alliance_name or '' }}</td>
+              <td class="text-gray-300">{{ p.best_tier or '' }}{% if not p.full_tg5 %}<span class="text-amber-500" title="{{ p.full_tier_note }}">*</span>{% endif %}</td>
+              {% for slot in data.slots %}
+                <td class="text-center">{% if p.availability[slot.index] %}<span class="text-green-400">&#9679;</span>{% endif %}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr class="border-t-2 border-kvk-gray-700 text-gray-400">
+            <td class="py-1.5 font-bold" colspan="4">Online each hour</td>
+            {% for n in team.hourly %}<td class="text-center font-bold">{{ n }}</td>{% endfor %}
+          </tr></tfoot>
+        </table>
+        {% if team.lead_gaps %}
+          <p class="text-xs text-red-400 mt-3">No rally lead online: {{ team.lead_gaps|join(', ') }}</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+    <p class="text-xs text-gray-600">* not full tier in every troop type</p>
+  {% endif %}
+</div></body></html>
