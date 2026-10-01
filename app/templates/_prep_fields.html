@@ -1,0 +1,158 @@
+            <div class="p-4 border-b border-kvk-gray-700 bg-kvk-gray-800/80 flex flex-wrap items-center justify-between gap-4" data-tz-container>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Timezone Display:</span>
+                    <div class="inline-flex rounded-lg shadow-sm border border-kvk-gray-600 p-0.5 bg-kvk-gray-900" role="group" id="tz-toggle-group">
+                        <button type="button" id="tz-toggle-utc" onclick="setTimezoneMode('utc')" 
+                                class="tz-toggle-btn px-3 py-1 text-xs font-bold rounded-md bg-kvk-gold text-kvk-gray-900 transition-all shadow-sm">
+                            🌐 UTC
+                        </button>
+                        <button type="button" id="tz-toggle-local" onclick="setTimezoneMode('local')" 
+                                class="tz-toggle-btn px-3 py-1 text-xs font-medium rounded-md text-gray-300 hover:text-white transition-all">
+                            🕒 Local Time (<span id="detected-tz-name">Local</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {% for day in active_days %}
+                    {% if day == 'construction' %}
+                    <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
+                        <h3 class="font-bold text-xl mb-2 text-kvk-gold">Day 1: Construction</h3>
+                        <div class="space-y-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" data-unit="days" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
+                                    <button type="button" data-unit="hours" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
+                                    <button type="button" data-unit="minutes" data-section="construction" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
+                                </div>
+                                <div id="input-group-construction" class="grid grid-cols-3 gap-2">
+                                    <div class="hidden" id="days-container-construction">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
+                                        <input type="number" id="days-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                    <div class="hidden" id="hours-container-construction">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
+                                        <input type="number" id="hours-construction" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                    <div id="minutes-container-construction">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
+                                        <input type="number" id="mins-construction" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                </div>
+                                <input type="hidden" name="speedups-construction" id="speedups-construction" value="0">
+                            </div>
+                            <div>
+                                <label for="truegold" class="block text-sm font-medium text-gray-300">TrueGold</label>
+                                <input type="number" name="truegold" id="truegold" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            </div>
+                            <div>
+                                <label for="tempered_truegold" class="block text-sm font-medium text-gray-300">Tempered TrueGold</label>
+                                <input type="number" name="tempered_truegold" id="tempered_truegold" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            </div>
+                        </div>
+                        <div id="slot-grid-construction" class="grid grid-cols-7 gap-1 mb-4" data-day="construction">
+                            {% for i in range(slot_labels|length) %}
+                                {% set count = slot_density.get('construction', [])[i] if slot_density and 'construction' in slot_density and i < slot_density['construction']|length else 0 %}
+                                {% set contention = 'low' if count <= 10 else ('medium' if count <= 20 else 'high') %}
+                                <div class="slot slot-traffic-{{ contention }}" data-index="{{ i }}" data-count="{{ count }}" data-contention="{{ contention }}" data-utc-label="{{ slot_labels[i] }}" title="{{ slot_labels[i] }} UTC ({{ count }} applicant{% if count != 1 %}s{% endif %} - {{ contention|capitalize }} demand)">
+                                    <div class="slot-content">
+                                        <span class="slot-time-text">{{ slot_labels[i] }}</span>
+                                        <span class="contention-indicator dot-{{ contention }}" title="{{ count }} applicant{% if count != 1 %}s{% endif %} ({{ contention|capitalize }})"></span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="slots-construction" id="slots-input-construction">
+                    </div>
+                    {% elif day == 'research' %}
+                    <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
+                        <h3 class="font-bold text-xl mb-2 text-kvk-gold">Day {{ event.active_days.research_day if event.active_days.research_day else '5' }}: Research</h3>
+                         <div class="space-y-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" data-unit="days" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
+                                    <button type="button" data-unit="hours" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
+                                    <button type="button" data-unit="minutes" data-section="research" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
+                                </div>
+                                <div id="input-group-research" class="grid grid-cols-3 gap-2">
+                                    <div class="hidden" id="days-container-research">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
+                                        <input type="number" id="days-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                    <div class="hidden" id="hours-container-research">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
+                                        <input type="number" id="hours-research" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                    <div id="minutes-container-research">
+                                        <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
+                                        <input type="number" id="mins-research" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                    </div>
+                                </div>
+                                <input type="hidden" name="speedups-research" id="speedups-research" value="0">
+                            </div>
+                            <div>
+                                <label for="truegold_dust" class="block text-sm font-medium text-gray-300">TrueGold Dust</label>
+                                <input type="number" name="truegold_dust" id="truegold_dust" min="0" class="mt-1 block w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200">
+                            </div>
+                        </div>
+                        <div id="slot-grid-research" class="grid grid-cols-7 gap-1 mb-4" data-day="research">
+                            {% for i in range(slot_labels|length) %}
+                                {% set count = slot_density.get('research', [])[i] if slot_density and 'research' in slot_density and i < slot_density['research']|length else 0 %}
+                                {% set contention = 'low' if count <= 10 else ('medium' if count <= 20 else 'high') %}
+                                <div class="slot slot-traffic-{{ contention }}" data-index="{{ i }}" data-count="{{ count }}" data-contention="{{ contention }}" data-utc-label="{{ slot_labels[i] }}" title="{{ slot_labels[i] }} UTC ({{ count }} applicant{% if count != 1 %}s{% endif %} - {{ contention|capitalize }} demand)">
+                                    <div class="slot-content">
+                                        <span class="slot-time-text">{{ slot_labels[i] }}</span>
+                                        <span class="contention-indicator dot-{{ contention }}" title="{{ count }} applicant{% if count != 1 %}s{% endif %} ({{ contention|capitalize }})"></span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="slots-research" id="slots-input-research">
+                    </div>
+                    {% elif day == 'training' %}
+                    <div class="p-4 rounded-lg bg-kvk-gray-900 border border-kvk-gray-700">
+                        <h3 class="font-bold text-xl mb-2 text-kvk-gold">Day 4: Troop Training</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Speedups</label>
+                            <div class="flex gap-2 mb-2">
+                                <button type="button" data-unit="days" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Days</button>
+                                <button type="button" data-unit="hours" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gray-700 bg-kvk-gray-700 text-gray-400 hover:bg-kvk-gray-600 transition">Hours</button>
+                                <button type="button" data-unit="minutes" data-section="training" class="unit-btn flex-1 py-1 px-2 text-xs rounded border border-kvk-gold bg-kvk-gold text-kvk-gray-900 font-bold transition">Minutes</button>
+                            </div>
+                            <div id="input-group-training" class="grid grid-cols-3 gap-2">
+                                <div class="hidden" id="days-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Days</label>
+                                    <input type="number" id="days-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                </div>
+                                <div class="hidden" id="hours-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Hours</label>
+                                    <input type="number" id="hours-training" min="0" max="23" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                </div>
+                                <div id="minutes-container-training">
+                                    <label class="block text-[10px] uppercase text-gray-500 mb-1">Minutes</label>
+                                    <input type="number" id="mins-training" min="0" placeholder="0" class="dynamic-input w-full bg-kvk-gray-700 border-kvk-gray-700 rounded-md text-gray-200 text-sm">
+                                </div>
+                            </div>
+                            <input type="hidden" name="speedups-training" id="speedups-training" value="0">
+                        </div>
+                        <div id="slot-grid-training" class="grid grid-cols-7 gap-1 mb-4" data-day="training">
+                            {% for i in range(slot_labels|length) %}
+                                {% set count = slot_density.get('training', [])[i] if slot_density and 'training' in slot_density and i < slot_density['training']|length else 0 %}
+                                {% set contention = 'low' if count <= 10 else ('medium' if count <= 20 else 'high') %}
+                                <div class="slot slot-traffic-{{ contention }}" data-index="{{ i }}" data-count="{{ count }}" data-contention="{{ contention }}" data-utc-label="{{ slot_labels[i] }}" title="{{ slot_labels[i] }} UTC ({{ count }} applicant{% if count != 1 %}s{% endif %} - {{ contention|capitalize }} demand)">
+                                    <div class="slot-content">
+                                        <span class="slot-time-text">{{ slot_labels[i] }}</span>
+                                        <span class="contention-indicator dot-{{ contention }}" title="{{ count }} applicant{% if count != 1 %}s{% endif %} ({{ contention|capitalize }})"></span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="slots-training" id="slots-input-training">
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
