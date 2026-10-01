@@ -1,0 +1,28 @@
+# Deployment blueprint for Render.
+#
+# This file has to sit at the top of the repository, next to the app folders.
+# The persistent disk keeps the database alive across deploys and restarts.
+
+services:
+  - type: web
+    name: kvk-planner
+    runtime: docker
+    plan: starter
+    region: frankfurt
+
+    disk:
+      name: planner-data
+      mountPath: /app/data
+      sizeGB: 1
+
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SUPERADMIN_SECRET
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /app/data/planner.db
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: ENABLE_SCREENSHOT_UPLOAD
+        value: "false"
