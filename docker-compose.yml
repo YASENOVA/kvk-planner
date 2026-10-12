@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "12348:5000"
+    volumes:
+      - planner_data:/app/data
+      - planner_uploads:/app/app/static/uploads
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/app/data/planner.db
+      - SUPERADMIN_SECRET=${SUPERADMIN_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+volumes:
+  planner_data:
+  planner_uploads:
